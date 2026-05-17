@@ -1,0 +1,45 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: devtrack-mysql
+    environment:
+      MYSQL_DATABASE: devtrack
+      MYSQL_ROOT_PASSWORD: password
+    ports:
+      - "3306:3306"
+    volumes:
+      - devtrack_mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-ppassword"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: .
+    container_name: devtrack-api
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      SERVER_PORT: 8080
+      DB_URL: jdbc:mysql://mysql:3306/devtrack?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      DB_USERNAME: root
+      DB_PASSWORD: password
+      JWT_SECRET: replace-this-compose-secret-with-a-strong-production-secret
+      CORS_ALLOWED_ORIGINS: http://localhost:3000
+      DEVTRACK_SEED_ENABLED: true
+    ports:
+      - "8080:8080"
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: devtrack-web
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"
+
+volumes:
+  devtrack_mysql:
